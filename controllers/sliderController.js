@@ -7,14 +7,18 @@ const status = require('../middleware/statusMiddleware')
 class SliderController {
     async create(req, res, next) {
         try {
-            const { productId } = req.body
+            const { url } = req.body
             const {img} = req.files
             let fileName = uuid.v4() + ".jpg"
             img.mv(path.resolve(__dirname, '..', 'static', fileName))
 
-            const slider = await Slider.create({ productId, img: fileName })
+            const slider = await Slider.create({ url, img: fileName })
 
-            const response = status(slider)
+            const {id} = slider
+
+            const sliderResult = await Slider.findOne({where:{id}})
+
+            const response = status(sliderResult)
             return res.json(response)
         } catch(e) {
             next(ApiError.badRequest(e.message))
@@ -31,17 +35,28 @@ class SliderController {
         }
     }
 
-    async update(req, res, next) {
+    async getOne(req, res, next) {
         try {
             const { id } = req.params
-            const { productId } = req.body
-            const {img} = req.files
-            let fileName = uuid.v4() + ".jpg"
-            img.mv(path.resolve(__dirname, '..', 'static', fileName))
-            await Slider.update({productId, img: fileName}, {where: { id: id }})
             const slider = await Slider.findOne({
                 where: {id}
             })
+            const response = status(slider)
+            return res.json(response)
+        } catch (e) {
+            next(ApiError.badRequest(e.message))
+        }
+    }
+
+    async update(req, res, next) {
+        try {
+            const { id } = req.params
+            const { url } = req.body
+            const {img} = req.files
+            let fileName = uuid.v4() + ".jpg"
+            img.mv(path.resolve(__dirname, '..', 'static', fileName))
+            await Slider.update({url, img: fileName}, {where: { id: id }})
+            const slider = await Slider.findOne({where: {id}})
             const response = status(slider)
             return res.json(response)
         } catch (e) {

@@ -1,4 +1,4 @@
-const { Sales, SalesLineups, Product, Basket, User } = require('../models/models')
+const { Sales, SalesLineups, Product, Basket, User, Pharmacy } = require('../models/models')
 const ApiError = require('../error/ApiError')
 const checkUserId = require('../middleware/checkUserIdMiddleware')
 const giveUserId = require('../middleware/giveUserIdMiddleware')
@@ -14,6 +14,11 @@ const arrStatus = [
     "PROCESSED",
     "DELIVERY",
     "COMPLETED",
+]
+
+const arrDeliveryType = [
+    "HOME",
+    "PICKUP",
 ]
 
 const checkPaymentType = (paymentType) => {
@@ -34,10 +39,19 @@ const checkStatus = (status) => {
     return false
 }
 
+const checkDeliveryType = (deliveryType) => {
+    for (let key in arrDeliveryType) {
+        if (arrDeliveryType[key] == deliveryType) {
+            return true
+        }
+    }
+    return false
+}
+
 class SalesController {
     async create(req, res, next) {
         try {
-            const { paymentType } = req.body
+            const { paymentType, deliveryType, clientAddress, pharmacyId } = req.body
             let status = "CREATED"
             const userId = giveUserId(req)
             if (!userId) {
@@ -46,7 +60,20 @@ class SalesController {
             if (!checkPaymentType(paymentType)) {
                 return next(ApiError.badRequest('Не верно указан тип оплаты'))
             }
-            let sales = await Sales.create({status, userId, paymentType})
+            if (!checkDeliveryType(deliveryType)) {
+                return next(ApiError.badRequest('Не верно указан тип доставки'))
+            }
+            if (deliveryType === arrDeliveryType[0]) {
+                if (!clientAddress) {
+                    return next(ApiError.badRequest('Не указан адрес доставки'))
+                }
+            }
+            if (deliveryType === arrDeliveryType[1]) {
+                if (!pharmacyId) {
+                    return next(ApiError.badRequest('Не указан адрес самовывозова'))
+                }
+            }
+            let sales = await Sales.create({status, userId, paymentType, deliveryType, clientAddress, pharmacyId})
 
             const { id } = sales
             const saleId = id
@@ -69,14 +96,14 @@ class SalesController {
             status = "PROCESSED"
             await Sales.update({status}, {where: { id: saleId }})
 
-            sales = await Sales.findAll({
+            sales = await Sales.findOne({
                 include: [
                     {
                         model:SalesLineups,
                         include:[Product]
                     }
                 ],
-                where:{userId}
+                where:{id}
             })
 
             const response = statusRequies(sales)
@@ -88,7 +115,14 @@ class SalesController {
 
     async getAll(req, res, next) {
         try {
-            const sales = await Sales.findAll()
+            const sales = await Sales.findAll({
+                include: [
+                    {
+                        model:SalesLineups,
+                        include:[Product]
+                    }
+                ]
+            })
             const response = statusRequies(sales)
             return res.json(response)
         } catch (e) {
@@ -133,8 +167,39 @@ class SalesController {
             const sales = await Sales.findOne({
                 include: [
                     {
-                        model: User,
-                        required: true
+                        model: User
+                    },
+                    {
+                        model: Pharmacy
+                    },
+                    {
+                        model:SalesLineups,
+                        include:[Product],    
+                    }
+                ],
+                where:{id}
+            })
+            if (userId !== sales.user.id) {
+                return next(ApiError.badRequest('Заказ не найден'))
+            }
+            const response = statusRequies(sales)
+            return res.json(response)
+        } catch (e) {
+            next(ApiError.badRequest(e.message))
+        }
+    }
+
+    async getOneAdmin(req, res, next) {
+        try {
+            const { id } = req.params
+
+            const sales = await Sales.findOne({
+                include: [
+                    {
+                        model: User
+                    },
+                    {
+                        model: Pharmacy
                     },
                     {
                         model:SalesLineups,
@@ -178,16 +243,41 @@ class SalesController {
     async updateAdmin(req, res, next) {
         try {
             const { id } = req.params
-            const {status, paymentType} = req.body
+            const {status, paymentType, deliveryType, clientAddress, pharmacyId } = req.body
             if (!checkStatus(status) && status) {
                 return next(ApiError.badRequest('Не верно указан статус оплаты'))
             }
             if (!checkPaymentType(paymentType) && paymentType) {
                 return next(ApiError.badRequest('Не верно указан тип оплаты'))
             }
-            await Sales.update({status, paymentType}, {where: { id: id }})
+            if (!checkDeliveryType(deliveryType) && deliveryType) {
+                return next(ApiError.badRequest('Не верно указан тип оплаты'))
+            }
+            if (deliveryType === arrDeliveryType[0] && paymentType) {
+                if (!clientAddress) {
+                    return next(ApiError.badRequest('Не указан адрес доставки'))
+                }
+            }
+            if (deliveryType === arrDeliveryType[1] && paymentType) {
+                if (!pharmacyId) {
+                    return next(ApiError.badRequest('Не указан адрес самовывозова'))
+                }
+            }
+            await Sales.update({status, paymentType, deliveryType, clientAddress, pharmacyId}, {where: { id: id }})
             const sales = await Sales.findOne({
-                where: {id}
+                include: [
+                    {
+                        model: User
+                    },
+                    {
+                        model: Pharmacy
+                    },
+                    {
+                        model:SalesLineups,
+                        include:[Product],    
+                    }
+                ],
+                where:{id}
             })
             const response = statusRequies(sales)
             return res.json(response)

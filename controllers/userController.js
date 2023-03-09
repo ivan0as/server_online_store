@@ -3,6 +3,7 @@ const ApiError = require('../error/ApiError')
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 const validator = require('email-validator')
+const parsePhoneNumber = require('libphonenumber-js')
 const status = require('../middleware/statusMiddleware')
 
 const generateJwt = (id, email, role) => {
@@ -31,7 +32,7 @@ const tokenUser = (token, user) => {
 class UserController {
     async registration(req, res, next) {
         try {
-            const {email, password, phoneNumber} = req.body
+            const {email, password, phoneNumber, name} = req.body
             if (!email || !password) {
                 return next(ApiError.badRequest('Некорректный email или password'))
             }
@@ -42,9 +43,13 @@ class UserController {
             if (candidate) {
                 return next(ApiError.badRequest('Пользователь с таким email уже существует'))
             }
+            const phoneNumberValidated = parsePhoneNumber(phoneNumber, 'RU')
+            if (!phoneNumberValidated.isValid()) {
+                return next(ApiError.badRequest('Некорректный номер телефона'))
+            }
             const hashPassword = await bcrypt.hash(password, 5)
-            const user = await User.create({email, password: hashPassword, phoneNumber})
-            const token = generateJwt(user.id, user.email, user.role, user.phoneNumber)
+            const user = await User.create({email, password: hashPassword, phoneNumber: phoneNumberValidated.number, name})
+            const token = generateJwt(user.id, user.email, user.role, user.phoneNumber, user.name)
             const userData = tokenUser(token, user)
             const response = status(userData)
             return res.json(response)
@@ -64,7 +69,7 @@ class UserController {
             if (!comparePassword) {
                 return next(ApiError.internal('Указанный пароль не верен'))
             }
-            const token = generateJwt(user.id, user.email, user.role, user.phoneNumber)
+            const token = generateJwt(user.id, user.email, user.role, user.phoneNumber, user.name)
             const userData = tokenUser(token, user)
             const response = status(userData)
             return res.json(response)
@@ -75,7 +80,7 @@ class UserController {
 
     async check(req, res, next) {
         try {
-            const token = generateJwt(req.user.id, req.user.email, req.user.role, req.user.phoneNumber)
+            const token = generateJwt(req.user.id, req.user.email, req.user.role, req.user.phoneNumber, req.user.name)
             const user = await User.findOne({
                 where: {id: req.user.id}
             })
@@ -112,11 +117,13 @@ class UserController {
 
     async updateUser(req, res, next) {
         try {
-            const token = generateJwt(req.user.id, req.user.email, req.user.role, req.user.phoneNumber)
+            const token = generateJwt(req.user.id, req.user.email, req.user.role, req.user.phoneNumber, req.user.name)
             let user = await User.findOne({
                 where: {id: req.user.id}
             })
-            const { email, password, phoneNumber } = req.body
+            const { email, password, phoneNumber, name } = req.body
+
+            let phoneNumberSend = phoneNumber
             if (email) {
                 if (!validator.validate(email)) {
                     return next(ApiError.badRequest('Некорректный email'))
@@ -126,12 +133,18 @@ class UserController {
                     return next(ApiError.badRequest('Пользователь с таким email уже существует'))
                 }
             }
-            await User.update({email, password, phoneNumber}, {where: { id: req.user.id }})
+            if (phoneNumber) {
+                const phoneNumberValidated = parsePhoneNumber(phoneNumber, 'RU')
+                if (!phoneNumberValidated.isValid()) {
+                    return next(ApiError.badRequest('Некорректный номер телефона'))
+                }
+                phoneNumberSend = phoneNumberValidated.number
+            }
+            await User.update({email, password, phoneNumber: phoneNumberSend, name}, {where: { id: req.user.id }})
             user = await User.findOne({
                 where: {id: req.user.id}
             })
-            const userData = tokenUser(token, user)
-            const response = status(userData)
+            const response = status(user)
             return res.json(response)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -141,14 +154,22 @@ class UserController {
     async update(req, res, next) {
         try {
             const { id } = req.params
-            const { email, password, role, phoneNumber } = req.body
+            const { email, password, role, phoneNumber, name } = req.body
+            let phoneNumberSend = phoneNumber
             if (!validator.validate(email) && email) {
                 return next(ApiError.badRequest('Некорректный email'))
             }
             if (!checkingRolesCorrectness(role) && role) {
                 return next(ApiError.badRequest('Некорректна указана роль'))
             }
-            await User.update({email, password, role, phoneNumber}, {where: { id: id }})
+            if (phoneNumber) {
+                const phoneNumberValidated = parsePhoneNumber(phoneNumber, 'RU')
+                if (!phoneNumberValidated.isValid()) {
+                    return next(ApiError.badRequest('Некорректный номер телефона'))
+                }
+                phoneNumberSend = phoneNumberValidated.number
+            }
+            await User.update({email, password, role, phoneNumber: phoneNumberSend, name}, {where: { id: id }})
             const user = await User.findOne({
                 where: {id}
             })
@@ -174,7 +195,7 @@ class UserController {
 
     async getUser(req, res, next) {
         try {
-            const token = generateJwt(req.user.id, req.user.email, req.user.role, req.user.phoneNumber)
+            const token = generateJwt(req.user.id, req.user.email, req.user.role, req.user.phoneNumber, req.user.name)
             const user = await User.findOne({
                 where: {id: req.user.id}
             })

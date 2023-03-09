@@ -5,6 +5,7 @@ const checkRole = require('../middleware/checkRoleMiddleware')
 
 router.post('/', checkRole('ADMIN'), producerController.create)
 router.get('/', producerController.getAll)
+router.get('/:id', producerController.getOne)
 router.put('/:id', checkRole('ADMIN'), producerController.update)
 router.delete('/:id', checkRole('ADMIN'), producerController.delete)
 

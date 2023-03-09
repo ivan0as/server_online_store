@@ -24,6 +24,19 @@ class CountryController {
         }
     }
 
+    async getOne(req, res, next) {
+        try {
+            const { id } = req.params
+            const country = await Country.findOne({
+                where: {id}
+            })
+            const response = status(country)
+            return res.json(response)
+        } catch (e) {
+            next(ApiError.badRequest(e.message))
+        }
+    }
+
     async update(req, res, next) {
         try {
             const { id } = req.params

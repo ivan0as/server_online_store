@@ -24,6 +24,19 @@ class TypeController {
         }
     }
 
+    async getOne(req, res, next) {
+        try {
+            const { id } = req.params
+            const types = await Type.findOne({
+                where: {id}
+            })
+            const response = status(types)
+            return res.json(response)
+        } catch (e) {
+            next(ApiError.badRequest(e.message))
+        }
+    }
+
     async update(req, res, next) {
         try {
             const { id } = req.params

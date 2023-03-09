@@ -10,6 +10,7 @@ const countryRouter = require('./countryRouter')
 const general_typeRouter = require('./generalTypeRouter')
 const sliderRouter = require('./sliderRouter')
 const salesLineupsRouter = require('./salesLineupsRouter')
+const pharmacyRouter = require('./pharmacyRouter')
 
 router.use('/user', userRouter)
 router.use('/basket', basketRouter)
@@ -21,5 +22,6 @@ router.use('/country', countryRouter)
 router.use('/generalType', general_typeRouter)
 router.use('/slider', sliderRouter)
 router.use('/salesLineups', salesLineupsRouter)
+router.use('/pharmacy', pharmacyRouter)
 
 module.exports = router

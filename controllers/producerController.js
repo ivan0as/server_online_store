@@ -24,6 +24,19 @@ class ProducerController {
         }
     }
 
+    async getOne(req, res, next) {
+        try {
+            const { id } = req.params
+            const producer = await Producer.findOne({
+                where: {id}
+            })
+            const response = status(producer)
+            return res.json(response)
+        } catch (e) {
+            next(ApiError.badRequest(e.message))
+        }
+    }
+
     async update(req, res, next) {
         try {
             const { id } = req.params

@@ -1,13 +1,13 @@
-const { GeneralType } = require('../models/models')
+const { Pharmacy } = require('../models/models')
 const ApiError = require('../error/ApiError')
 const status = require('../middleware/statusMiddleware')
 
-class GeneralTypeController {
+class PharmacyController {
     async create(req, res, next) {
         try {
-            const { name } = req.body
-            const generalType = await GeneralType.create({name})
-            const response = status(generalType)
+            const { address } = req.body
+            const pharmacy = await Pharmacy.create({address})
+            const response = status(pharmacy)
             return res.json(response)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -16,8 +16,8 @@ class GeneralTypeController {
 
     async getAll(req, res, next) {
         try {
-            const generalType = await GeneralType.findAll()
-            const response = status(generalType)
+            const pharmacy = await Pharmacy.findAll()
+            const response = status(pharmacy)
             return res.json(response)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -27,10 +27,10 @@ class GeneralTypeController {
     async getOne(req, res, next) {
         try {
             const { id } = req.params
-            const generalType = await GeneralType.findOne({
+            const pharmacy = await Pharmacy.findOne({
                 where: {id}
             })
-            const response = status(generalType)
+            const response = status(pharmacy)
             return res.json(response)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -40,12 +40,12 @@ class GeneralTypeController {
     async update(req, res, next) {
         try {
             const { id } = req.params
-            const { name } = req.body
-            await GeneralType.update({name}, {where: { id: id }})
-            const generalType = await GeneralType.findOne({
+            const { address } = req.body
+            await Pharmacy.update({address}, {where: { id: id }})
+            const pharmacy = await Pharmacy.findOne({
                 where: {id}
             })
-            const response = status(generalType)
+            const response = status(pharmacy)
             return res.json(response)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -55,10 +55,10 @@ class GeneralTypeController {
     async delete(req, res, next) {
         try {
             const {id} = req.params
-            const generalType = await GeneralType.destroy({
+            const pharmacy = await Pharmacy.destroy({
                 where: {id}
             })
-            const response = status(generalType)
+            const response = status(pharmacy)
             return res.json(response)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -66,4 +66,4 @@ class GeneralTypeController {
     }
 }
 
-module.exports =new GeneralTypeController()
+module.exports =new PharmacyController()

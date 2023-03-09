@@ -6,7 +6,8 @@ const User = sequelize.define ('user', {
     email: {type: DataTypes.STRING, unique: true,},
     password: {type: DataTypes.STRING},
     role: {type: DataTypes.STRING, defaultValue: "USER"},
-    phoneNumber: {type: DataTypes.INTEGER, allowNull: false},
+    phoneNumber: {type: DataTypes.STRING, allowNull: false},
+    name: {type: DataTypes.STRING, allowNull: false},
 })
 
 const Basket = sequelize.define('basket', {
@@ -17,7 +18,9 @@ const Basket = sequelize.define('basket', {
 const Sales = sequelize.define('sales', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
     status: {type: DataTypes.STRING, defaultValue: "PROCESSING"},
-    paymentType: {type: DataTypes.STRING},
+    paymentType: {type: DataTypes.STRING, allowNull: false},
+    deliveryType: {type: DataTypes.STRING, allowNull: false},
+    clientAddress: {type: DataTypes.STRING},
 })
 
 const SalesLineups = sequelize.define('sales_lineups', {
@@ -30,7 +33,7 @@ const SalesLineups = sequelize.define('sales_lineups', {
 const Product = sequelize.define('product', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
     name: {type: DataTypes.STRING, unique: true, allowNull: false},
-    description: {type: DataTypes.STRING, allowNull: false},
+    description: {type: DataTypes.TEXT, allowNull: false},
     price: {type: DataTypes.INTEGER, allowNull: false},
     img: {type: DataTypes.STRING, allowNull: false},
 })
@@ -58,6 +61,12 @@ const GeneralType = sequelize.define('general_type', {
 const Slider = sequelize.define('slider', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
     img: {type: DataTypes.STRING, allowNull: false},
+    url: {type: DataTypes.STRING, allowNull: false},
+})
+
+const Pharmacy = sequelize.define('pharmacy', {
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    address: {type: DataTypes.STRING, unique: true, allowNull: false},
 })
 
 User.hasMany(Basket)
@@ -75,9 +84,6 @@ Basket.belongsTo(Product)
 Product.hasMany(SalesLineups)
 SalesLineups.belongsTo(Product)
 
-Product.hasMany(Slider)
-Slider.belongsTo(Product)
-
 Producer.hasMany(Product)
 Product.belongsTo(Producer)
 
@@ -90,6 +96,9 @@ Product.belongsTo(Type)
 GeneralType.hasMany(Type)
 Type.belongsTo(GeneralType)
 
+Pharmacy.hasMany(Sales)
+Sales.belongsTo(Pharmacy)
+
 module.exports = {
     User,
     Basket,
@@ -101,4 +110,5 @@ module.exports = {
     Country,
     GeneralType,
     Slider,
+    Pharmacy,
 }

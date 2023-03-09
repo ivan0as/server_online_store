@@ -1,6 +1,7 @@
 const uuid = require('uuid')
 const path = require('path')
-const { Product } = require('../models/models')
+const { Op } = require('sequelize')
+const { Product, Country, Producer, Type } = require('../models/models')
 const ApiError = require('../error/ApiError')
 const status = require('../middleware/statusMiddleware')
 
@@ -23,34 +24,44 @@ class ProductController {
 
     async getAll(req, res, next) {
         try {
-            let { producerId, countryId, typeId, limit, page } = req.query
+            let { producerId, countryId, typeId, typeName, searchName, limit, page } = req.query
             page = page || 1
             limit = limit || 9
             let offset = page * limit - limit
-            let product;
-            if (!producerId && !countryId && !typeId) {
-                product = await Product.findAndCountAll({limit, offset})
+
+            const arrAdditionalVariables = {
+                producerId: producerId,
+                countryId: countryId,
+                typeId: typeId,
+                name: { [Op.iLike]: `%${searchName}%` },
             }
-            if (!producerId && !countryId && typeId) {
-                product = await Product.findAndCountAll({where:{typeId}, limit, offset})
+
+            if (!searchName) {
+                delete arrAdditionalVariables.name
             }
-            if (!producerId && countryId && !typeId) {
-                product = await Product.findAndCountAll({where:{countryId}, limit, offset})
+
+            for (let key in arrAdditionalVariables) {
+                if (!arrAdditionalVariables[key]) {
+                    delete arrAdditionalVariables[key]
+                }
             }
-            if (producerId && !countryId && !typeId) {
-                product = await Product.findAndCountAll({where:{producerId}, limit, offset})
-            }
-            if (!producerId && countryId && typeId) {
-                product = await Product.findAndCountAll({where:{countryId, typeId}, limit, offset})
-            }
-            if (producerId && !countryId && typeId) {
-                product = await Product.findAndCountAll({where:{producerId, typeId}, limit, offset})
-            }
-            if (producerId && countryId && !typeId) {
-                product = await Product.findAndCountAll({where:{producerId, countryId}, limit, offset})
-            }
-            if (producerId && countryId && typeId) {
-                product = await Product.findAndCountAll({where:{producerId, countryId, typeId}, limit, offset})
+
+            let product
+
+            if (arrAdditionalVariables.name) {
+                product = await Product.findAndCountAll({
+                    where:arrAdditionalVariables, limit, offset
+                })
+            } else {
+                product = await Product.findAndCountAll({
+                    include:[
+                        {
+                            model: Type,
+                            where: {name: typeName}
+                        },
+                    ],
+                    where:arrAdditionalVariables, limit, offset
+                })
             }
     
             const response = status(product)
@@ -64,6 +75,14 @@ class ProductController {
         try {
             const { id } = req.params
             const product = await Product.findOne({
+                include: [
+                    {
+                        model: Country
+                    },
+                    {
+                        model: Producer
+                    }
+                ],
                 where: {id}
             })
             const response = status(product)
